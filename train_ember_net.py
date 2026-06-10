@@ -183,8 +183,49 @@ def build_patch_cache(samples, frames, pos_by_frame, ignore_by_frame, cache_dir)
           flush=True)
 
 
+def _gauss_add(img, cx, cy, sigma, peak):
+    """Additive Gaussian point source on a float image (max-composited)."""
+    h, w = img.shape
+    r = int(max(3, sigma * 4))
+    x0, x1 = max(0, int(cx) - r), min(w, int(cx) + r + 1)
+    y0, y1 = max(0, int(cy) - r), min(h, int(cy) + r + 1)
+    if x0 >= x1 or y0 >= y1:
+        return
+    yy, xx = np.mgrid[y0:y1, x0:x1]
+    g = peak * np.exp(-((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * sigma ** 2))
+    np.maximum(img[y0:y1, x0:x1], g.astype(img.dtype), out=img[y0:y1, x0:x1])
+
+
+def composite_synthetic_embers(stack, rng, n_max=3):
+    """Composite 1..n_max synthetic embers onto a REAL 5-frame patch stack
+    (float [0,1]): ballistic trajectories, slow-shutter motion-blur streaks,
+    brightness decay. Returns center-frame bump positions — unlimited exact
+    positives on real cluttered backgrounds."""
+    h, w = stack.shape[1:]
+    bumps = []
+    for _ in range(int(rng.integers(1, n_max + 1))):
+        x0, y0 = rng.uniform(12, w - 12), rng.uniform(12, h - 12)
+        speed = rng.uniform(1.5, 28.0)
+        ang = rng.uniform(0, 2 * np.pi)
+        vx, vy = speed * np.cos(ang), speed * np.sin(ang)
+        sigma = rng.uniform(1.0, 2.6)
+        peak = rng.uniform(0.20, 0.75)   # gray ~50-190: dim to bright embers
+        fade = rng.uniform(0.88, 1.0)    # cooling across the 5 frames
+        for t in range(STACK):
+            cx, cy = x0 + vx * (t - 2), y0 + vy * (t - 2)
+            pk = peak * (fade ** t)
+            nsub = max(1, int(min(speed, 24) // 3))  # streak length ~ speed
+            for s in range(nsub):
+                f = (s + 0.5) / nsub - 0.5
+                _gauss_add(stack[t], cx + vx * f, cy + vy * f, sigma,
+                           pk * (0.75 if nsub > 1 else 1.0))
+        if 6 <= x0 < w - 6 and 6 <= y0 < h - 6:
+            bumps.append((float(x0), float(y0)))
+    return stack, bumps
+
+
 class PatchDataset(Dataset):
-    def __init__(self, cache_dir, val=False, augment=True):
+    def __init__(self, cache_dir, val=False, augment=True, synth_frac=0.0):
         cache_dir = Path(cache_dir)
         info = json.load(open(cache_dir / "meta.json"))
         self.mm = np.load(cache_dir / "patches.npy", mmap_mode="r")
@@ -193,6 +234,8 @@ class PatchDataset(Dataset):
         self.rows = [r for r, _ in pairs]
         self.meta = [m for _, m in pairs]
         self.augment = augment and not val
+        self.synth_frac = synth_frac if self.augment else 0.0
+        self.rng = np.random.default_rng(SEED)
 
     def __len__(self):
         return len(self.rows)
@@ -226,6 +269,11 @@ class PatchDataset(Dataset):
     def __getitem__(self, i):
         x = self.mm[self.rows[i]].astype(np.float32) / 255.0
         m = self.meta[i]
+        bumps = list(m["bumps"])
+        if self.synth_frac and random.random() < self.synth_frac:
+            x = np.ascontiguousarray(x)
+            x, extra = composite_synthetic_embers(x, self.rng)
+            bumps += extra
         flip = self.augment and random.random() < 0.5
         if flip:
             x = x[:, :, ::-1].copy()
@@ -236,7 +284,7 @@ class PatchDataset(Dataset):
         med = np.median(x, axis=0)
         diff = np.clip(x[STACK // 2] - med, 0, 1)[None]
         x = np.concatenate([x, diff], axis=0)
-        hm = self.render_heatmap(m["bumps"], flip=flip)
+        hm = self.render_heatmap(bumps, flip=flip)
         mask = self.render_loss_mask(m.get("ignores", []), flip=flip)
         return (torch.from_numpy(x), torch.from_numpy(hm[None]),
                 torch.from_numpy(mask[None]))
@@ -369,6 +417,9 @@ def main():
     parser.add_argument("--max-pos", type=int, default=60000)
     parser.add_argument("--base-width", type=int, default=16,
                         help="EmberNet channel width (32 for the H100 config)")
+    parser.add_argument("--synth-frac", type=float, default=0.0,
+                        help="fraction of train patches composited with "
+                             "synthetic embers (e.g. 0.5)")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -384,7 +435,7 @@ def main():
         build_patch_cache(samples, frames, pos_by_frame, ignore_by_frame,
                           cache_dir)
 
-    train_ds = PatchDataset(cache_dir, val=False)
+    train_ds = PatchDataset(cache_dir, val=False, synth_frac=args.synth_frac)
     val_ds = PatchDataset(cache_dir, val=True, augment=False)
     print(f"[INFO] train {len(train_ds)} / val {len(val_ds)}", flush=True)
 
