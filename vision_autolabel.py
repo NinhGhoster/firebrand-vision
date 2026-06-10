@@ -129,13 +129,18 @@ def fuel_roi_and_dist(bg, flame_mask, warm_thresh, buffer_px):
         for comp in touching:
             if comp != 0:
                 roi[lab == comp] = 1
+    core_bbox = None
+    if roi.max() > 0:
+        ys, xs = np.nonzero(roi)
+        core_bbox = [int(xs.min()), int(ys.min()),
+                     int(xs.max()) + 1, int(ys.max()) + 1]
     if buffer_px > 0 and roi.max() > 0:
         roi = cv2.dilate(roi, np.ones((buffer_px, buffer_px), np.uint8))
     if roi.max() == 0:
         dist = np.full(bg.shape, 1e6, dtype=np.float32)
     else:
         dist = cv2.distanceTransform((1 - roi).astype(np.uint8), cv2.DIST_L2, 3)
-    return roi.astype(bool), dist
+    return roi.astype(bool), dist, core_bbox
 
 
 def detect_candidates(gray, bg, sigma, flame_mask, flame_dist, roi_dist, p):
@@ -145,13 +150,22 @@ def detect_candidates(gray, bg, sigma, flame_mask, flame_dist, roi_dist, p):
     diff = cv2.subtract(gray, bg).astype(np.float32)  # clamps at 0: brighter-than-bg only
     thr_map = np.maximum(p["diff_threshold"], p["noise_k"] * sigma)
 
-    # Suppress large bright transients (flame flicker, hot gas plumes)
+    # Suppress large bright transients (flame flicker, hot gas plumes); the
+    # largest flame-scale component is also the per-frame FLAME scene object
     bright = (gray >= p["flame_bright"]).astype(np.uint8)
     n_b, lab_b, st_b, _ = cv2.connectedComponentsWithStats(bright, connectivity=8)
     big = np.zeros_like(bright)
+    flame_bbox, flame_area = None, 0
     for i in range(1, n_b):
-        if st_b[i, cv2.CC_STAT_AREA] > p["big_bright_area"]:
+        a = int(st_b[i, cv2.CC_STAT_AREA])
+        if a > p["big_bright_area"]:
             big[lab_b == i] = 1
+            if a > flame_area:
+                flame_area = a
+                flame_bbox = [int(st_b[i, cv2.CC_STAT_LEFT]),
+                              int(st_b[i, cv2.CC_STAT_TOP]),
+                              int(st_b[i, cv2.CC_STAT_LEFT] + st_b[i, cv2.CC_STAT_WIDTH]),
+                              int(st_b[i, cv2.CC_STAT_TOP] + st_b[i, cv2.CC_STAT_HEIGHT])]
     if big.max() > 0:
         big = cv2.dilate(big, np.ones((p["transient_buffer"], p["transient_buffer"]), np.uint8))
 
@@ -204,7 +218,7 @@ def detect_candidates(gray, bg, sigma, flame_mask, flame_dist, roi_dist, p):
             "flame_dist": round(float(flame_dist[int(cy), int(cx)]), 1),
             "roi_dist": round(float(roi_dist[int(cy), int(cx)]), 1),
         })
-    return cands
+    return cands, {"flame_bbox": flame_bbox, "flame_area": flame_area}
 
 
 def stats_chunk(job):
@@ -234,18 +248,21 @@ def process_chunk(job):
     frames, p = job["frames"], job["params"]
     paths = [path for _, path in frames]
     bg, sigma = build_background(paths, max_samples=p["bg_samples"])
-    cands_out = {}
+    cands_out, scene_out = {}, {}
     if bg is None:
-        return cands_out
+        return cands_out, scene_out
     flame_mask, flame_dist = flame_mask_and_dist(bg, p["flame_bg_thresh"], p["flame_buffer"])
-    fuel_roi, roi_dist = fuel_roi_and_dist(bg, flame_mask, p["warm_bg_thresh"], p["roi_buffer"])
+    fuel_roi, roi_dist, fuel_bbox = fuel_roi_and_dist(
+        bg, flame_mask, p["warm_bg_thresh"], p["roi_buffer"])
     for idx, path in frames:
         gray = load_gray(path)
         if gray is None:
             continue
-        cands_out[idx] = detect_candidates(gray, bg, sigma, flame_mask, flame_dist,
-                                           roi_dist, p)
-    return cands_out
+        cands_out[idx], scene = detect_candidates(
+            gray, bg, sigma, flame_mask, flame_dist, roi_dist, p)
+        scene["fuel_bbox"] = fuel_bbox
+        scene_out[idx] = scene
+    return cands_out, scene_out
 
 
 def build_chunks(frames, chunk_size, ignition):
@@ -280,6 +297,75 @@ def detect_ignition(stats, min_pixels, min_frames=3):
         else:
             consecutive = 0
     return None
+
+
+def detect_states(stats, scenes, ignition, p):
+    """Scene-state timeline: pre_ignition -> burning -> (burner_off:
+    smoldering | extinguished). 'Smoldering' = gas flame gone but glowing
+    spots remain on the fuel/charcoal — distinct from extinguished."""
+    if ignition is None:
+        last = stats[-1]["frame_0based"] if stats else 0
+        return [{"state": "pre_ignition", "start_frame": 0,
+                 "end_frame": last}], None
+
+    flame_on = {s["frame_0based"]:
+                scenes.get(s["frame_0based"], {}).get("flame_area", 0)
+                >= p["flame_on_area"] for s in stats}
+    glow = {s["frame_0based"]: s["bright_count"] > 0 for s in stats}
+
+    burner_off = None
+    run = 0
+    ordered = sorted(f for f in flame_on if f >= ignition)
+    for f in ordered:
+        if not flame_on[f]:
+            run += 1
+            if run >= p["burner_off_min_frames"]:
+                burner_off = f - p["burner_off_min_frames"] + 1
+                break
+        else:
+            run = 0
+
+    states = []
+    if ignition > 0:
+        states.append({"state": "pre_ignition", "start_frame": 0,
+                       "end_frame": ignition - 1})
+    last = ordered[-1] if ordered else ignition
+    if burner_off is None:
+        states.append({"state": "burning", "start_frame": ignition,
+                       "end_frame": last})
+    else:
+        states.append({"state": "burning", "start_frame": ignition,
+                       "end_frame": burner_off - 1})
+        post = [f for f in ordered if f >= burner_off]
+        smold = any(glow.get(f, False) for f in post)
+        states.append({"state": "smoldering" if smold else "extinguished",
+                       "start_frame": burner_off, "end_frame": last})
+    return states, burner_off
+
+
+def derive_burner_bbox(frames, ignition, p, n_samples=60):
+    """Static gas-burner box: the region that stays bright across the WHOLE
+    post-ignition burn (flame flickers and moves; the hot metal base does
+    not) in a global median background."""
+    post = [f for f in frames if ignition is None or f[0] >= ignition]
+    if not post:
+        return None
+    stride = max(1, len(post) // n_samples)
+    bg, _ = build_background([p_ for _, p_ in post[::stride]],
+                             max_samples=n_samples)
+    if bg is None:
+        return None
+    mask = (bg >= p["flame_bg_thresh"]).astype(np.uint8)
+    n, lab, st, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    best, area = None, 0
+    for i in range(1, n):
+        a = int(st[i, cv2.CC_STAT_AREA])
+        if a > area:
+            area = a
+            best = [int(st[i, cv2.CC_STAT_LEFT]), int(st[i, cv2.CC_STAT_TOP]),
+                    int(st[i, cv2.CC_STAT_LEFT] + st[i, cv2.CC_STAT_WIDTH]),
+                    int(st[i, cv2.CC_STAT_TOP] + st[i, cv2.CC_STAT_HEIGHT])]
+    return best
 
 
 # ----------------------------------------------------------------------------
@@ -436,7 +522,8 @@ def gate_track(feat, p):
 # Outputs
 # ----------------------------------------------------------------------------
 
-def write_outputs(out_dir, frames, accepted, stats, events, params, img_shape):
+def write_outputs(out_dir, frames, accepted, stats, events, params, img_shape,
+                  scenes=None, burner_bbox=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     h, w = img_shape
@@ -460,16 +547,18 @@ def write_outputs(out_dir, frames, accepted, stats, events, params, img_shape):
                 "detections": dets,
             }) + "\n")
 
-    # COCO export
+    # COCO export — multi-class: firebrand + scene context objects
+    scenes = scenes or {}
     images, annotations = [], []
     ann_id = 1
-    for idx in sorted(per_frame):
+    coco_frames = sorted(set(per_frame) | set(scenes))
+    for idx in coco_frames:
         images.append({
             "id": idx,
             "file_name": f"frame_{idx + 1:05d}.png",
             "width": w, "height": h,
         })
-        for d in per_frame[idx]:
+        for d in per_frame.get(idx, []):
             x1, y1, x2, y2 = d["bbox"]
             annotations.append({
                 "id": ann_id, "image_id": idx, "category_id": 1,
@@ -478,12 +567,40 @@ def write_outputs(out_dir, frames, accepted, stats, events, params, img_shape):
                 "attributes": {"track_id": d["track_id"]},
             })
             ann_id += 1
+        sc = scenes.get(idx, {})
+        for cat_id, box in [(2, sc.get("flame_bbox")),
+                            (3, sc.get("fuel_bbox")),
+                            (4, burner_bbox)]:
+            if box:
+                x1, y1, x2, y2 = box
+                annotations.append({
+                    "id": ann_id, "image_id": idx, "category_id": cat_id,
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "area": (x2 - x1) * (y2 - y1), "iscrowd": 0,
+                })
+                ann_id += 1
     with open(out_dir / "labels_coco.json", "w") as f:
         json.dump({
             "images": images,
             "annotations": annotations,
-            "categories": [{"id": 1, "name": "firebrand"}],
+            "categories": [{"id": 1, "name": "firebrand"},
+                           {"id": 2, "name": "flame"},
+                           {"id": 3, "name": "fuel_stringybark"},
+                           {"id": 4, "name": "gas_burner"}],
         }, f)
+
+    # per-frame scene objects + state (for renderers / training context)
+    if scenes:
+        with open(out_dir / "scene_objects.jsonl", "w") as f:
+            for idx in sorted(scenes):
+                sc = scenes[idx]
+                f.write(json.dumps({
+                    "frame_0based": idx,
+                    "flame_bbox": sc.get("flame_bbox"),
+                    "flame_area": sc.get("flame_area", 0),
+                    "fuel_bbox": sc.get("fuel_bbox"),
+                    "burner_bbox": burner_bbox,
+                }) + "\n")
 
     # YOLO export (labeled frames only)
     yolo_dir = out_dir / "yolo"
@@ -577,8 +694,8 @@ def qa_roi_overlay(out_dir, frames, ignition, params):
         return
     flame_mask, _ = flame_mask_and_dist(bg, params["flame_bg_thresh"],
                                         params["flame_buffer"])
-    fuel_roi, _ = fuel_roi_and_dist(bg, flame_mask, params["warm_bg_thresh"],
-                                    params["roi_buffer"])
+    fuel_roi, _, _ = fuel_roi_and_dist(bg, flame_mask, params["warm_bg_thresh"],
+                                       params["roi_buffer"])
     vis = cv2.applyColorMap(bg, cv2.COLORMAP_INFERNO)
     for mask, color in [(fuel_roi, (0, 255, 0)), (flame_mask, (0, 0, 255))]:
         cnts, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL,
@@ -799,6 +916,8 @@ def default_params(args=None):
                                     # glow on structure, not flight through air
         "floor_y": 620,             # horizon: tracks living below this are
                                     # floor reflections / landed embers
+        "flame_on_area": 300,       # flame-scale bright area => gas burner on
+        "burner_off_min_frames": 90,  # sustained no-flame (~3 s) => burner off
     }
     if args is not None:
         for k in p:
@@ -843,19 +962,22 @@ def run_pipeline(frames_dir, out_dir, events_out, params, workers=4, chunk_size=
           f"(t={events['ignition_time_s']}s) in {time.time() - t0:.0f}s"
           if ignition is not None else "[WARN] No ignition detected", flush=True)
 
-    # Stage B/C: ignition-aware chunks -> candidates
+    # Stage B/C: ignition-aware chunks -> candidates + per-frame scene objects
     chunks = build_chunks(frames, chunk_size, ignition)
     jobs = [{"frames": c, "params": params} for c in chunks]
-    candidates = {}
+    candidates, scenes = {}, {}
     if workers > 1:
         with ProcessPoolExecutor(max_workers=workers) as ex:
-            for i, c in enumerate(ex.map(process_chunk, jobs)):
+            for i, (c, s) in enumerate(ex.map(process_chunk, jobs)):
                 candidates.update(c)
+                scenes.update(s)
                 print(f"[INFO] chunk {i + 1}/{len(chunks)} done "
                       f"({sum(len(v) for v in c.values())} candidates)", flush=True)
     else:
         for i, job in enumerate(jobs):
-            candidates.update(process_chunk(job))
+            c, s = process_chunk(job)
+            candidates.update(c)
+            scenes.update(s)
             print(f"[INFO] chunk {i + 1}/{len(chunks)} done", flush=True)
 
     n_cand = sum(len(v) for v in candidates.values())
@@ -922,10 +1044,23 @@ def run_pipeline(frames_dir, out_dir, events_out, params, workers=4, chunk_size=
     events["labels_per_minute"] = [per_min.get(m, 0)
                                    for m in range(max(per_min, default=0) + 1)]
 
+    # Scene states (burning / burner-off / smoldering) + static burner box
+    states, burner_off = detect_states(stats, scenes, ignition, params)
+    events["states"] = states
+    events["burner_off_frame_0based"] = burner_off
+    events["burner_off_time_s"] = (round(burner_off / FPS, 2)
+                                   if burner_off is not None else None)
+    print(f"[INFO] states: " + ", ".join(
+        f"{s['state']}[{s['start_frame']}-{s['end_frame']}]" for s in states),
+        flush=True)
+    burner_bbox = derive_burner_bbox(frames, ignition, params)
+    print(f"[INFO] gas burner bbox: {burner_bbox}", flush=True)
+
     # Outputs
     accepted_dets = {tid: dets for tid, (dets, _) in accepted.items()}
     per_frame, jsonl_path = write_outputs(out_dir, frames, accepted_dets,
-                                          stats, events, params, img_shape)
+                                          stats, events, params, img_shape,
+                                          scenes=scenes, burner_bbox=burner_bbox)
     write_tracks_json(out_dir, accepted, rejected, events, params)
     write_rejected_jsonl(out_dir, rejected)
     events_path = Path(events_out)
@@ -969,8 +1104,10 @@ def _draw_gauss(img, cx, cy, sigma, peak):
     img[y0:y1, x0:x1] = np.maximum(img[y0:y1, x0:x1], g)
 
 
-def make_synthetic_scene(out_dir, n_frames=360, h=256, w=320, ignition=60):
-    """Static background + flame from `ignition` + 6 GT embers + distractors."""
+def make_synthetic_scene(out_dir, n_frames=360, h=256, w=320, ignition=60,
+                         flameoff=335):
+    """Static background + flame from `ignition` to `flameoff` (then two
+    static smoldering glow spots) + 7 GT embers + distractors."""
     rng = np.random.default_rng(0)
     yy, xx = np.mgrid[0:h, 0:w]
     base = (18 + 14 * yy / h).astype(np.float32)  # dark static gradient
@@ -1010,7 +1147,11 @@ def make_synthetic_scene(out_dir, n_frames=360, h=256, w=320, ignition=60):
         # warm structure band (e.g. table edge), static in the background
         img[210:217, 40:140] = np.maximum(
             img[210:217, 40:140], 70.0 if i >= ignition else 30.0)
-        if i >= ignition:
+        if i >= flameoff:
+            # burner off, fuel smoldering: two static glow spots on the column
+            cv2.circle(img, (155, 150), 2, 100.0, -1)
+            cv2.circle(img, (168, 175), 2, 95.0, -1)
+        if ignition <= i < flameoff:
             # flame: bright flickering blob (~40x30) at burner
             fh, fw = 30, 40
             flicker = 200 + 40 * np.sin(i * 0.7) + rng.normal(0, 5)
@@ -1066,9 +1207,12 @@ def self_test():
         frames_dir = os.path.join(tmp, "frames")
         out_dir = os.path.join(tmp, "labels")
         gt_tracks, ignition_gt, jitter_center = make_synthetic_scene(frames_dir)
+        flameoff_gt = 335
         params = default_params()
-        # synthetic scene is 256px tall; its floor zone starts ~y=222
-        params.update({"start": 0, "end": -1, "floor_y": 222})
+        # synthetic scene is 256px tall; its floor zone starts ~y=222.
+        # burner-off confirmation shortened to fit the 360-frame scene.
+        params.update({"start": 0, "end": -1, "floor_y": 222,
+                       "burner_off_min_frames": 12})
         result = run_pipeline(frames_dir, out_dir,
                               os.path.join(tmp, "vision_events.json"),
                               params, workers=2, chunk_size=120)
@@ -1090,6 +1234,18 @@ def self_test():
               onset is not None and 85 <= onset <= 115)
         check(f"no labels before ignition (got {ev['labels_before_ignition']})",
               ev["labels_before_ignition"] == 0)
+
+        # Burner-off + smoldering state detection
+        boff = ev.get("burner_off_frame_0based")
+        check(f"burner-off detected near {flameoff_gt} (got {boff})",
+              boff is not None and abs(boff - flameoff_gt) <= 6)
+        state_names = [s["state"] for s in ev.get("states", [])]
+        check(f"states = pre_ignition/burning/smoldering (got {state_names})",
+              state_names == ["pre_ignition", "burning", "smoldering"])
+        post_labels = sum(1 for tid, (dets, _) in result["accepted"].items()
+                          for f, _ in dets if f >= flameoff_gt)
+        check(f"static smoldering glow not labeled (labels after burner-off: "
+              f"{post_labels})", post_labels == 0)
 
         # Match accepted tracks to GT embers
         recovered = []
@@ -1194,7 +1350,8 @@ def main():
                 "transient_buffer", "bg_samples", "max_distance", "max_age",
                 "track_area_threshold", "min_lifetime", "warm_bg_thresh",
                 "roi_buffer", "stitch_gap", "stitch_dist", "min_track_bright",
-                "max_thin_dim", "max_track_bg", "floor_y"]:
+                "max_thin_dim", "max_track_bg", "floor_y", "flame_on_area",
+                "burner_off_min_frames"]:
         parser.add_argument(f"--{key.replace('_', '-')}", type=int, default=None)
     for key in ["min_displacement", "min_speed", "min_consistency",
                 "min_exit_dist", "noise_k", "min_sharpness"]:

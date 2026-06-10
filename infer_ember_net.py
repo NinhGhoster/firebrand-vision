@@ -77,7 +77,7 @@ def infer_chunk(model, device, chunk, p, thresh, batch_size=8):
         return {}
     flame_mask, flame_dist = flame_mask_and_dist(
         bg, p["flame_bg_thresh"], p["flame_buffer"])
-    fuel_roi, roi_dist = fuel_roi_and_dist(
+    fuel_roi, roi_dist, _ = fuel_roi_and_dist(
         bg, flame_mask, p["warm_bg_thresh"], p["roi_buffer"])
 
     out = {}

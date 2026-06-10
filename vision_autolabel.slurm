@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vision_label
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/vision_label_%j.out
@@ -26,6 +26,6 @@ python3 vision_autolabel.py \
   --out-dir outputs/vision_labels \
   --events-out outputs/vision_events.json \
   --start "$START" --end "$END" \
-  --workers 8
+  --workers 16
 
 echo "End: $(date)"
