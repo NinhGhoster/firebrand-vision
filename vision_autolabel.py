@@ -308,34 +308,45 @@ def detect_states(stats, scenes, ignition, p):
         return [{"state": "pre_ignition", "start_frame": 0,
                  "end_frame": last}], None
 
-    flame_on = {s["frame_0based"]:
-                scenes.get(s["frame_0based"], {}).get("flame_area", 0)
-                >= p["flame_on_area"] for s in stats}
     glow = {s["frame_0based"]: s["bright_count"] > 0 for s in stats}
+    ordered = sorted(s["frame_0based"] for s in stats if
+                     s["frame_0based"] >= ignition)
+    if not ordered:
+        return [{"state": "pre_ignition", "start_frame": 0,
+                 "end_frame": stats[-1]["frame_0based"]}], None
 
+    raw_on = np.array([scenes.get(f, {}).get("flame_area", 0)
+                       >= p["flame_on_area"] for f in ordered])
+
+    # burner off = the flame goes away and NEVER comes back (a lull followed
+    # by flame return is still 'burning' — e.g. right after the ignition
+    # flare while the fuel catches). Anchor on the last SUSTAINED (>=3 frame)
+    # flame run so an isolated spurious spike can't postpone it.
     burner_off = None
-    run = 0
-    ordered = sorted(f for f in flame_on if f >= ignition)
-    for f in ordered:
-        if not flame_on[f]:
-            run += 1
-            if run >= p["burner_off_min_frames"]:
-                burner_off = f - p["burner_off_min_frames"] + 1
+    if raw_on.any():
+        last_on = int(np.nonzero(raw_on)[0][-1])
+        for i in reversed(np.nonzero(raw_on)[0]):
+            if i >= 2 and raw_on[i - 2:i + 1].all():
+                last_on = int(i)
                 break
-        else:
-            run = 0
+        tail = len(ordered) - 1 - last_on
+        if tail >= p["burner_off_min_frames"]:
+            burner_off = ordered[last_on + 1]
+    else:
+        burner_off = ordered[0]
 
     states = []
     if ignition > 0:
         states.append({"state": "pre_ignition", "start_frame": 0,
                        "end_frame": ignition - 1})
-    last = ordered[-1] if ordered else ignition
+    last = ordered[-1]
     if burner_off is None:
         states.append({"state": "burning", "start_frame": ignition,
                        "end_frame": last})
     else:
-        states.append({"state": "burning", "start_frame": ignition,
-                       "end_frame": burner_off - 1})
+        if burner_off > ignition:
+            states.append({"state": "burning", "start_frame": ignition,
+                           "end_frame": burner_off - 1})
         post = [f for f in ordered if f >= burner_off]
         smold = any(glow.get(f, False) for f in post)
         states.append({"state": "smoldering" if smold else "extinguished",
