@@ -1,0 +1,15 @@
+# data & artifacts (live on Spartan / local review copies)
+outputs/
+*.mp4
+*.pt
+*.npy
+crops*/
+images/
+S12.nc
+
+# environments & caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
