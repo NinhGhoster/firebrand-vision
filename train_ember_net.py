@@ -234,7 +234,7 @@ class PatchDataset(Dataset):
         self.rows = [r for r, _ in pairs]
         self.meta = [m for _, m in pairs]
         self.augment = augment and not val
-        self.synth_frac = synth_frac if self.augment else 0.0
+        self.synth_frac = synth_frac
         self.rng = np.random.default_rng(SEED)
 
     def __len__(self):
@@ -437,6 +437,10 @@ def main():
 
     train_ds = PatchDataset(cache_dir, val=False, synth_frac=args.synth_frac)
     val_ds = PatchDataset(cache_dir, val=True, augment=False)
+    # synthetic-GT validation: exact ground truth (real sparse labels cap the
+    # apparent F1 of even a perfect detector) — used for model selection
+    val_synth_ds = PatchDataset(cache_dir, val=True, augment=False,
+                                synth_frac=1.0)
     print(f"[INFO] train {len(train_ds)} / val {len(val_ds)}", flush=True)
 
     # oversample patches that contain embers (most patches are negatives)
@@ -449,6 +453,9 @@ def main():
                               drop_last=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                             num_workers=args.workers, pin_memory=True)
+    val_synth_loader = DataLoader(val_synth_ds, batch_size=args.batch_size,
+                                  shuffle=False, num_workers=args.workers,
+                                  pin_memory=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[INFO] device: {device}", flush=True)
@@ -464,7 +471,7 @@ def main():
     history = []
     for epoch in range(1, args.epochs + 1):
         model.train()
-        tl, nb = 0.0, 0
+        tl, nb, n_skipped = 0.0, 0, 0
         t0 = time.time()
         for x, hm, mask in train_loader:
             x = x.to(device, non_blocking=True)
@@ -473,27 +480,38 @@ def main():
             opt.zero_grad(set_to_none=True)
             with torch.amp.autocast("cuda", enabled=device.type == "cuda"):
                 loss = focal_loss(model(x), hm, mask)
+            if not torch.isfinite(loss):
+                n_skipped += 1
+                continue
             scaler.scale(loss).backward()
+            scaler.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             scaler.step(opt)
             scaler.update()
             tl += loss.item()
             nb += 1
         sched.step()
+        if n_skipped:
+            print(f"[WARN] skipped {n_skipped} non-finite batches", flush=True)
 
         prec, rec, f1, th = val_detection_f1(model, val_loader, device)
+        sp, sr, sf1, sth = val_detection_f1(model, val_synth_loader, device)
         history.append({"epoch": epoch, "train_loss": tl / max(nb, 1),
                         "val_precision": round(prec, 4),
                         "val_recall": round(rec, 4), "val_f1": round(f1, 4),
-                        "val_thresh": th})
+                        "val_thresh": th, "synth_f1": round(sf1, 4),
+                        "synth_thresh": sth})
         print(f"[E{epoch:02d}] loss {tl/max(nb,1):.4f} | "
-              f"val P {prec:.3f} R {rec:.3f} F1 {f1:.3f} @th={th} | "
+              f"real P {prec:.3f} R {rec:.3f} F1 {f1:.3f} @th={th} | "
+              f"synthGT P {sp:.3f} R {sr:.3f} F1 {sf1:.3f} @th={sth} | "
               f"{time.time()-t0:.0f}s", flush=True)
-        if f1 > best_f1:
-            best_f1 = f1
-            torch.save({"model": model.state_dict(), "f1": f1, "thresh": th,
+        if sf1 > best_f1:  # select by exact-GT metric
+            best_f1 = sf1
+            torch.save({"model": model.state_dict(), "f1": f1,
+                        "synth_f1": sf1, "thresh": sth,
                         "epoch": epoch, "base_width": args.base_width},
                        out / "best.pt")
-            print(f"[INFO] saved best (F1={f1:.3f})", flush=True)
+            print(f"[INFO] saved best (synthGT F1={sf1:.3f})", flush=True)
 
     torch.save({"model": model.state_dict()}, out / "final.pt")
     with open(out / "history.json", "w") as f:
