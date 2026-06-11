@@ -33,16 +33,25 @@ Local copies of the latest review set: `outputs/final_qa/` (incl. `qa_flux.png`
 flux curve, plus diagnostic grids `burst_check.png`, `floor_check.png`,
 `bottom_check.png`, `lateral_check.png`).
 
-## Learned detector (EmberNet) — Spartan `outputs/ember_net/`
+## Learned detector (EmberNet) — Spartan `outputs/ember_net*/`
 
-| File | Contents |
-|---|---|
-| `best.pt`, `final.pt` | Trained checkpoints (best = highest val F1 + its threshold) |
-| `history.json` | Per-epoch training/val metrics |
-| `cache_v2/` | Training patch cache (memmap + meta) |
-| `detections_model.jsonl` | (after inference) model detections per frame |
-| `tracks_model.json` | (after inference) model tracks after identical gating |
-| `model_vs_rule.json` | (after inference) overlap summary vs rule labels |
+| Dir | Variant | Result (full-video, gated, vs 1,625 rule tracks) |
+|---|---|---|
+| `outputs/ember_net/` | v2: w16, real labels only | 123 tracks, 70% rule-matched, 5.1% rule recall |
+| `outputs/ember_net_t10/`, `_t05/` | v2 threshold sweep | recall 7.3% / 9.9% but 1.4k/11k unmatched tracks (noise flood) |
+| `outputs/ember_net_v5w24s/` | +synth, fp16 (crashed E47; E9 checkpoint) | 68 tracks, 3.0% recall |
+| `outputs/ember_net_v6w16s/` | +synth, fp32, stable | 69 tracks, 93% rule-matched, 3.6% recall |
+| `outputs/ember_net_v6w24s/` | +synth, fp32, stable | 76 tracks, 82% rule-matched, 3.3% recall |
+
+Each dir: `best.pt`/`final.pt`, `history.json` (real + synthetic-GT metrics per
+epoch), and after inference `detections_model.jsonl`, `tracks_model.json`,
+`model_vs_rule.json`. Patch cache shared at `outputs/ember_net/cache_v2/`.
+
+**Verdict (2026-06-11)**: the from-scratch EmberNet is high-precision but
+recall-limited (synthetic-GT F1 plateaus ≈0.40; data-limited at 9.6k real
+positives) — the RULE-BASED LABELS remain the primary detection/tracking
+result; the model stack is kept as a verifier and as the documented baseline
+for a future attempt with an established small-object architecture.
 
 ## Logs — Spartan `logs/`
 
