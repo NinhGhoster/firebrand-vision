@@ -405,6 +405,7 @@ document.addEventListener("keydown", async e => {
     step(1);
   }
   else if (k === "u") await sendOp("mark_frame_done", {frame: S.frame, done: false});
+  else if (k === "z") await sendOp("undo", {});
   else if (k === "h") { S.showProposals = !S.showProposals; draw(); }
   else if (k === "j") { S.showRejected = !S.showRejected; draw(); }
   else if (k === "s") { S.showScene = !S.showScene; draw(); }

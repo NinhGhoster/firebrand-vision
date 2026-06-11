@@ -1,0 +1,134 @@
+{"op": "move_box", "payload": {"source": "rule", "track_id": 371, "frame": 412, "bbox": [466.06673563638634, 386.7714876883312, 468.06673563638634, 396.7714876883312]}, "ts": 1781218109.6524491}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 331}, "ts": 1781218138.592612}
+{"op": "move_box", "payload": {"source": "rule", "track_id": 77, "frame": 331, "bbox": [828, 610, 831, 614]}, "ts": 1781218141.189431}
+{"op": "move_box", "payload": {"source": "rule", "track_id": 77, "frame": 331, "bbox": [828, 610, 831, 614]}, "ts": 1781218142.21684}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 323}, "ts": 1781218264.4989839}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 323}, "ts": 1781218266.6114821}
+{"op": "move_box", "payload": {"source": "rule", "track_id": 83, "frame": 323, "bbox": [520, 554, 530, 564.681954326567]}, "ts": 1781218267.997844}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 323}, "ts": 1781218273.136943}
+{"op": "move_box", "payload": {"source": "rule", "track_id": 83, "frame": 323, "bbox": [520, 554, 529.1146680266885, 564.681954326567]}, "ts": 1781218276.5401049}
+{"op": "move_box", "payload": {"source": "rule", "track_id": 83, "frame": 323, "bbox": [520, 521.2427169874719, 588.4319102385637, 564.681954326567]}, "ts": 1781218277.4097931}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 323}, "ts": 1781218278.436}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 324}, "ts": 1781218286.007482}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 324}, "ts": 1781218287.420183}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 325}, "ts": 1781218302.5539699}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 326}, "ts": 1781218305.945888}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 327}, "ts": 1781218314.748304}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 327}, "ts": 1781218315.96545}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 328}, "ts": 1781218318.627233}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 83, "frame": 328}, "ts": 1781218320.215261}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 329}, "ts": 1781218322.8046699}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 330}, "ts": 1781218325.205905}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 77, "frame": 331}, "ts": 1781218329.151712}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 334}, "ts": 1781218342.20283}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 335}, "ts": 1781218347.286187}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 336}, "ts": 1781218351.231297}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 337}, "ts": 1781218355.732747}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 337, "bbox": [355.07954993297756, 440.422845893772, 373.17415907702053, 463.04110732382566]}, "ts": 1781218362.8362062}
+{"op": "mark_frame_done", "payload": {"frame": 323, "done": true}, "ts": 1781218389.890018}
+{"op": "mark_frame_done", "payload": {"frame": 324, "done": true}, "ts": 1781218390.715466}
+{"op": "mark_frame_done", "payload": {"frame": 325, "done": true}, "ts": 1781218391.6441548}
+{"op": "mark_frame_done", "payload": {"frame": 324, "done": true}, "ts": 1781218394.559134}
+{"op": "mark_frame_done", "payload": {"frame": 325, "done": true}, "ts": 1781218394.988457}
+{"op": "mark_frame_done", "payload": {"frame": 326, "done": true}, "ts": 1781218395.4389231}
+{"op": "mark_frame_done", "payload": {"frame": 327, "done": true}, "ts": 1781218395.935869}
+{"op": "mark_frame_done", "payload": {"frame": 328, "done": true}, "ts": 1781218396.416251}
+{"op": "mark_frame_done", "payload": {"frame": 329, "done": true}, "ts": 1781218396.970111}
+{"op": "mark_frame_done", "payload": {"frame": 330, "done": true}, "ts": 1781218398.1382558}
+{"op": "mark_frame_done", "payload": {"frame": 331, "done": true}, "ts": 1781218398.7241092}
+{"op": "mark_frame_done", "payload": {"frame": 332, "done": true}, "ts": 1781218399.489195}
+{"op": "mark_frame_done", "payload": {"frame": 333, "done": true}, "ts": 1781218401.470326}
+{"op": "mark_frame_done", "payload": {"frame": 334, "done": true}, "ts": 1781218402.9157581}
+{"op": "mark_frame_done", "payload": {"frame": 335, "done": true}, "ts": 1781218403.6738088}
+{"op": "mark_frame_done", "payload": {"frame": 336, "done": true}, "ts": 1781218404.248718}
+{"op": "mark_frame_done", "payload": {"frame": 337, "done": true}, "ts": 1781218405.790184}
+{"op": "mark_frame_done", "payload": {"frame": 337, "done": true}, "ts": 1781218410.232785}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 156, "frame": 338}, "ts": 1781218413.820977}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 338, "bbox": [355.83349198064604, 442.68467203677733, 373.17415907702053, 465.30293346683106]}, "ts": 1781218418.823056}
+{"op": "mark_frame_done", "payload": {"frame": 338, "done": true}, "ts": 1781218422.532767}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 339, "bbox": [354.3256078853091, 441.9307299891089, 373.17415907702053, 464.5489914191626]}, "ts": 1781218427.1316748}
+{"op": "mark_frame_done", "payload": {"frame": 339, "done": true}, "ts": 1781218428.235578}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 340, "bbox": [348.29407150396145, 443.4386140844458, 371.6662749816836, 475.85812213418944]}, "ts": 1781218436.466012}
+{"op": "mark_frame_done", "payload": {"frame": 340, "done": true}, "ts": 1781218437.778168}
+{"op": "mark_frame_done", "payload": {"frame": 341, "done": true}, "ts": 1781218438.657983}
+{"op": "mark_frame_done", "payload": {"frame": 342, "done": true}, "ts": 1781218439.4052212}
+{"op": "mark_frame_done", "payload": {"frame": 343, "done": true}, "ts": 1781218441.314338}
+{"op": "mark_frame_done", "payload": {"frame": 344, "done": true}, "ts": 1781218441.73542}
+{"op": "mark_frame_done", "payload": {"frame": 345, "done": true}, "ts": 1781218441.9128902}
+{"op": "mark_frame_done", "payload": {"frame": 346, "done": true}, "ts": 1781218442.4815822}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 337}, "ts": 1781218530.145407}
+{"op": "add_keyframe", "payload": {"hid": 1, "frame": 337, "bbox": [361.0930188199733, 445.68463116989324, 373.17415907702053, 463.04110732382566]}, "ts": 1781218532.995009}
+{"op": "delete_keyframe", "payload": {"hid": 1, "frame": 337}, "ts": 1781218535.98211}
+{"op": "add_keyframe", "payload": {"hid": 2, "frame": 338, "bbox": [355.83349198064604, 442.68467203677733, 400.23476906850135, 496.12196151268427]}, "ts": 1781218544.85124}
+{"op": "delete_keyframe", "payload": {"hid": 2, "frame": 338}, "ts": 1781218546.9180841}
+{"op": "delete_keyframe", "payload": {"hid": 3, "frame": 339}, "ts": 1781218552.915881}
+{"op": "delete_keyframe", "payload": {"hid": 4, "frame": 340}, "ts": 1781218620.30814}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 341}, "ts": 1781218624.598015}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 342}, "ts": 1781218628.0911}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 343}, "ts": 1781218632.699739}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 208, "frame": 343}, "ts": 1781218633.579801}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 208, "frame": 344}, "ts": 1781218637.1643279}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 344}, "ts": 1781218638.1264691}
+{"op": "mark_frame_done", "payload": {"frame": 343, "done": true}, "ts": 1781218640.193974}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 342}, "ts": 1781218658.243785}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 344}, "ts": 1781218668.530742}
+{"op": "mark_frame_done", "payload": {"frame": 344, "done": true}, "ts": 1781218670.36274}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 345}, "ts": 1781218672.013577}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 208, "frame": 345}, "ts": 1781218672.704101}
+{"op": "mark_frame_done", "payload": {"frame": 345, "done": true}, "ts": 1781218673.715014}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 346}, "ts": 1781218675.422027}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 208, "frame": 346}, "ts": 1781218676.22617}
+{"op": "mark_frame_done", "payload": {"frame": 346, "done": true}, "ts": 1781218677.330446}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 347}, "ts": 1781218678.719161}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 208, "frame": 347}, "ts": 1781218679.6072588}
+{"op": "mark_frame_done", "payload": {"frame": 347, "done": true}, "ts": 1781218787.7454772}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 348}, "ts": 1781218790.368893}
+{"op": "mark_frame_done", "payload": {"frame": 348, "done": true}, "ts": 1781218791.659536}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 347, "bbox": [328.21271676300574, 397.7618497109827, 355.73641618497106, 428.8369942196532]}, "ts": 1781218805.767524}
+{"op": "mark_frame_done", "payload": {"frame": 347, "done": true}, "ts": 1781218808.023202}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 348, "bbox": [334.42774566473986, 383.5560693641619, 359.28786127167626, 413.7433526011561]}, "ts": 1781218815.1067631}
+{"op": "mark_frame_done", "payload": {"frame": 348, "done": true}, "ts": 1781218816.394355}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 349, "bbox": [335.31560693641615, 337.3872832369942, 364.6150289017341, 370.23815028901737]}, "ts": 1781218823.027631}
+{"op": "mark_frame_done", "payload": {"frame": 349, "done": true}, "ts": 1781218824.336187}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 349}, "ts": 1781218836.739881}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 349}, "ts": 1781218838.671115}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 350, "bbox": [325.8798615584882, 307.18809834299753, 352.29456360466565, 339.8180244000403]}, "ts": 1781218851.215262}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 350}, "ts": 1781218854.455277}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 350}, "ts": 1781218855.4717498}
+{"op": "mark_frame_done", "payload": {"frame": 350, "done": true}, "ts": 1781218864.6347342}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 351, "bbox": [304.9034805218178, 233.38231321397217, 328.98747356392084, 268.34294827508944]}, "ts": 1781218867.878804}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 351}, "ts": 1781218870.3993332}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 351}, "ts": 1781218871.9541602}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 352, "bbox": [284.7040024865056, 192.20645414198958, 318.11083154490655, 231.05160420989768]}, "ts": 1781218928.671511}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 352}, "ts": 1781218930.656734}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 352}, "ts": 1781218933.2368262}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 353, "bbox": [266.0583304539097, 160.35343108630497, 289.3654204946546, 185.21432712976613]}, "ts": 1781218938.889178}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 353}, "ts": 1781218941.431086}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 354, "bbox": [235.75911340094143, 127.72350502926217, 268.3890394579842, 162.68414009037946]}, "ts": 1781218952.066772}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 354}, "ts": 1781218959.322496}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 239, "frame": 355}, "ts": 1781218966.6392682}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 355, "bbox": [181.4513933355414, 96.33859623957859, 202.39633338729064, 123.48944445480906]}, "ts": 1781218971.21569}
+{"op": "add_keyframe", "payload": {"hid": null, "frame": 356, "bbox": [170.04800399552283, 86.15645105095113, 190.4382049921329, 106.54665204756121]}, "ts": 1781218978.4114811}
+{"op": "mark_frame_done", "payload": {"frame": 356, "done": true}, "ts": 1781218979.49575}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 368}, "ts": 1781219008.6313658}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 369}, "ts": 1781219022.99597}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 370}, "ts": 1781219025.053301}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 371}, "ts": 1781219027.5038269}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 372}, "ts": 1781219031.443866}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 373}, "ts": 1781219034.0340538}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 280, "frame": 376}, "ts": 1781219047.492664}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 376}, "ts": 1781219048.288935}
+{"op": "mark_frame_done", "payload": {"frame": 376, "done": true}, "ts": 1781219050.3435478}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 377}, "ts": 1781219053.36388}
+{"op": "mark_frame_done", "payload": {"frame": 377, "done": true}, "ts": 1781219055.592787}
+{"op": "reject_box", "payload": {"source": "model", "track_id": 14, "frame": 378}, "ts": 1781219057.5300748}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 280, "frame": 378}, "ts": 1781219059.1001909}
+{"op": "mark_frame_done", "payload": {"frame": 378, "done": true}, "ts": 1781219060.152195}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 280, "frame": 379}, "ts": 1781219062.240932}
+{"op": "mark_frame_done", "payload": {"frame": 379, "done": true}, "ts": 1781219063.673645}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 280, "frame": 380}, "ts": 1781219066.481599}
+{"op": "mark_frame_done", "payload": {"frame": 380, "done": true}, "ts": 1781219067.5178869}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 280, "frame": 381}, "ts": 1781219068.944062}
+{"op": "mark_frame_done", "payload": {"frame": 381, "done": true}, "ts": 1781219069.731905}
+{"op": "reject_box", "payload": {"source": "rule", "track_id": 179, "frame": 350}, "ts": 1781219232.904643}
+{"op": "undo", "payload": {}, "ts": 1781219232.9424682}

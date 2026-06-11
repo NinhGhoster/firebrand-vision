@@ -165,15 +165,37 @@ class State:
 
 
 STATE = State()
+EFFECTIVE_OPS = []  # ops with undos resolved; replayed to rebuild STATE
+
+
+def rebuild_state():
+    global STATE
+    STATE = State()
+    for op in EFFECTIVE_OPS:
+        STATE.apply(op)
+
+
+def ingest(op):
+    """Apply one logged op, honouring 'undo' (cancels the previous op)."""
+    if op.get("op") == "undo":
+        if EFFECTIVE_OPS:
+            EFFECTIVE_OPS.pop()
+            rebuild_state()
+    else:
+        EFFECTIVE_OPS.append(op)
+        STATE.apply(op)
+
+
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 if OPS_PATH.exists():
     with open(OPS_PATH) as f:
         for line in f:
             try:
-                STATE.apply(json.loads(line))
+                ingest(json.loads(line))
             except Exception:
                 pass
-    print(f"[INFO] replayed ops log: {OPS_PATH}")
+    print(f"[INFO] replayed ops log: {OPS_PATH} "
+          f"({len(EFFECTIVE_OPS)} effective ops)")
 
 
 # ----------------------------------------------------------------------------
@@ -225,7 +247,7 @@ def post_op():
     op["ts"] = time.time()
     with open(OPS_PATH, "a") as f:
         f.write(json.dumps(op) + "\n")
-    STATE.apply(op)
+    ingest(op)
     return jsonify({"ok": True, "next_hid": STATE.next_hid})
 
 
