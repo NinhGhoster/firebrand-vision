@@ -31,6 +31,7 @@ from vision_autolabel import FPS, list_frames  # noqa: E402
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 COL_DETECT = (0, 255, 255)    # yellow
 COL_TRACK = (0, 255, 0)       # green
+COL_B = (255, 0, 255)         # magenta: second track set (e.g. model)
 
 
 def load_track_boxes(tracks_path, confirm_frames):
@@ -90,9 +91,15 @@ def main():
                         help="detections before a track counts as 'tracking'")
     parser.add_argument("--inflate", type=int, default=6,
                         help="box inflation (px) so the object stays visible")
+    parser.add_argument("--tracks-b", default=None,
+                        help="optional second track set (e.g. model output) "
+                             "drawn in magenta with 'model' labels")
     args = parser.parse_args()
 
     per_frame, data = load_track_boxes(args.tracks, args.confirm_frames)
+    per_frame_b = {}
+    if args.tracks_b:
+        per_frame_b, _ = load_track_boxes(args.tracks_b, args.confirm_frames)
     states = load_states(args.events)
     frames = list_frames(args.frames_dir, args.start, args.end)
     if not frames:
@@ -124,7 +131,16 @@ def main():
                 n_track += 1
             else:
                 n_detect += 1
+        n_model = 0
+        for tid, (x1, y1, x2, y2), status in per_frame_b.get(idx, []):
+            x1, y1 = int(x1) - inf, int(y1) - inf
+            x2, y2 = int(x2) + inf, int(y2) + inf
+            cv2.rectangle(img, (x1, y1), (x2, y2), COL_B, 1, cv2.LINE_AA)
+            draw_label(img, f"model #{tid}", x1, y2 + 16, COL_B)
+            n_model += 1
         head = f"f{idx}  t={idx / FPS:.1f}s  detect:{n_detect} tracking:{n_track}"
+        if args.tracks_b:
+            head += f" model:{n_model}"
         st = state_at(states, idx)
         if st:
             head += f"  state:{st}"
