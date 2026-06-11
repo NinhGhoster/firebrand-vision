@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Firebrand Labeling</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="topbar">
+  <span id="seg-name">—</span>
+  <span id="frame-info">f0</span>
+  <span id="counts"></span>
+  <span id="save-state" class="ok">saved</span>
+  <span class="spacer"></span>
+  <select id="seg-select"></select>
+  <button id="btn-export">Export gold</button>
+  <button id="btn-help">? keys</button>
+</div>
+<div id="main">
+  <canvas id="cv"></canvas>
+</div>
+<div id="timeline"><canvas id="tl"></canvas></div>
+<div id="statusbar">
+  <span id="hint">hover a box: <b>a</b> accept · <b>x</b> reject · <b>A/X</b> whole track · drag to adjust ·
+  <b>n</b>+drag new box · <b>i</b> keyframe · <b>⌫</b> delete · <b>Enter</b> done+next ·
+  <b>←/→</b> step · <b>Space</b> play · <b>h</b> proposals · <b>j</b> rejected · <b>s</b> scene · wheel zoom · alt-drag pan</span>
+</div>
+<div id="help" class="hidden">
+  <h3>Keyboard</h3>
+  <table>
+    <tr><td>←/→</td><td>step 1 frame (Shift: 10)</td></tr>
+    <tr><td>Space</td><td>play / pause</td></tr>
+    <tr><td>[ / ]</td><td>slower / faster</td></tr>
+    <tr><td>a / x</td><td>accept / reject hovered box (this frame)</td></tr>
+    <tr><td>A / X</td><td>accept / reject hovered box's whole track</td></tr>
+    <tr><td>n + drag</td><td>draw a new (human) box — starts a track</td></tr>
+    <tr><td>click</td><td>select human track</td></tr>
+    <tr><td>i</td><td>add keyframe for selected human track at this frame</td></tr>
+    <tr><td>Backspace</td><td>delete hovered human keyframe (Shift: whole track)</td></tr>
+    <tr><td>Enter</td><td>mark frame done & advance</td></tr>
+    <tr><td>u</td><td>un-mark frame</td></tr>
+    <tr><td>h / j / s</td><td>toggle proposals / rejected / scene boxes</td></tr>
+    <tr><td>wheel / alt-drag / 0</td><td>zoom / pan / reset view</td></tr>
+  </table>
+  <p>green = rule proposal · magenta = model proposal · cyan = human ·
+     solid blue = accepted · dim red = rejected</p>
+  <button onclick="document.getElementById('help').classList.add('hidden')">close</button>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # data & artifacts (live on Spartan / local review copies)
-outputs/
+outputs/*
+# ...except the human gold labels — small and precious
+!outputs/human_labels/
 *.mp4
 *.pt
 *.npy

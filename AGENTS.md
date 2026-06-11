@@ -47,6 +47,7 @@
 | `infer_ember_net.py` (+ `.slurm`) | full-video inference + identical Stage D gating + `model_vs_rule.json` |
 | `render_results.py` (+ `.slurm`) | review videos per researcher conventions |
 | `compare_vision_temp_labels.py` | vision-vs-temp agreement (un-swaps temp centroids!) |
+| `label_platform/` | local assisted-labeling web app (Flask, port 8754): verify/correct auto-labels + add missed over stratified segments; append-only ops log `outputs/human_labels/ops.jsonl`; `export_gold.py` → gold set; `evaluate_gold.py` → rules/model vs gold |
 
 Run `python3 vision_autolabel.py --self-test` after ANY labeler change.
 Outputs map: see `RESULTS.md`. Current labels: v9 (1,625 tracks / 9,600 dets);
