@@ -420,6 +420,9 @@ def main():
     parser.add_argument("--synth-frac", type=float, default=0.0,
                         help="fraction of train patches composited with "
                              "synthetic embers (e.g. 0.5)")
+    parser.add_argument("--amp", action="store_true",
+                        help="enable fp16 autocast (off by default: unstable "
+                             "with focal loss)")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -465,7 +468,11 @@ def main():
 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
-    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
+    # fp32 by default: fp16 focal loss under extreme class imbalance is
+    # numerically unstable (weights exploded mid-run twice); the model is
+    # small enough that full precision costs little
+    use_amp = args.amp and device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     best_f1 = -1.0
     history = []
@@ -478,7 +485,7 @@ def main():
             hm = hm.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
             opt.zero_grad(set_to_none=True)
-            with torch.amp.autocast("cuda", enabled=device.type == "cuda"):
+            with torch.amp.autocast("cuda", enabled=use_amp):
                 loss = focal_loss(model(x), hm, mask)
             if not torch.isfinite(loss):
                 n_skipped += 1
