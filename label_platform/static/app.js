@@ -309,8 +309,12 @@ cv.addEventListener("mousemove", e => {
   }
   if (S.mode === "draw" && S.drag) { S.drag.x1 = ix; S.drag.y1 = iy; draw(); return; }
   if ((S.mode === "move" || S.mode === "resize") && S.drag) {
-    const b = S.drag.box, bb = S.drag.bbox0.slice();
     const dx = ix - S.drag.ix0, dy = iy - S.drag.iy0;
+    // a real drag starts only after a small threshold — a plain click
+    // (with hand jitter) must never move a box
+    if (!S.drag.moved && Math.hypot(dx, dy) < 3 / S.zoom) return;
+    S.drag.moved = true;
+    const b = S.drag.box, bb = S.drag.bbox0.slice();
     if (S.mode === "move") { bb[0]+=dx; bb[1]+=dy; bb[2]+=dx; bb[3]+=dy; }
     else {
       if (S.drag.corner.includes("l")) bb[0]+=dx;
@@ -343,19 +347,27 @@ cv.addEventListener("mousedown", e => {
   }
 });
 
-cv.addEventListener("mouseup", async () => {
+// on window, not the canvas: releasing the button outside the canvas must
+// still end the drag, or the box keeps following the cursor
+window.addEventListener("mouseup", async () => {
   if (S.mode === "draw" && S.drag) {
     const {x0, y0, x1, y1} = S.drag;
     const bbox = [Math.min(x0,x1), Math.min(y0,y1), Math.max(x0,x1), Math.max(y0,y1)];
     S.mode = "idle"; S.drag = null;
     if (bbox[2]-bbox[0] > 2 && bbox[3]-bbox[1] > 2) await addKeyframe(null, bbox);
+    else draw();
     return;
   }
-  if ((S.mode === "move" || S.mode === "resize") && S.drag && S.drag.live) {
-    const b = S.drag.box, bb = S.drag.live;
-    S.mode = "idle"; const drag = S.drag; S.drag = null;
-    if (b.kind === "human") await sendOp("add_keyframe", {hid: b.hid, frame: S.frame, bbox: bb});
-    else await sendOp("move_box", {source: b.source, track_id: b.track_id, frame: S.frame, bbox: bb});
+  if ((S.mode === "move" || S.mode === "resize") && S.drag) {
+    const drag = S.drag, b = drag.box;
+    S.mode = "idle"; S.drag = null;
+    if (drag.moved && drag.live) {
+      if (b.kind === "human") await sendOp("add_keyframe", {hid: b.hid, frame: S.frame, bbox: drag.live});
+      else await sendOp("move_box", {source: b.source, track_id: b.track_id, frame: S.frame, bbox: drag.live});
+    } else {
+      b.bbox = drag.bbox0;  // plain click: restore, select only
+      draw();
+    }
     return;
   }
   S.mode = "idle"; S.drag = null;
